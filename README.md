@@ -11,6 +11,7 @@
 - **RDK 开发专家**：识别 X5、S100、S600 与 RDK OS，按需读取 BPU、温度、内存、存储和工具链状态，并从 27 个带官方来源的专业主题中检索板型匹配的知识。
 - **模型部署闭环**：发现 ONNX、HBM 等模型产物，生成板型方案并启动可断线续跑的部署任务；验收报告统一记录精度、延迟、资源、环境和产物 SHA-256。
 - **双端一致体验**：板端 TUI 与 Mac Studio 连接同一 `agentd`、会话和权限控制面，支持流式 thinking、工具时间线、审批、图片输入和断线重连。
+- **Mac 本机文件只读导入**：任务默认可读取消息中明确给出的 Mac 绝对文件路径；Studio 流式上传、校验 SHA-256 并复用板端内容副本，也可在 Task settings 中完全关闭。
 - **持久与并行任务**：`hobot persistent` 保留完整终端，后台任务在 SSH 断开后继续运行；Side Agent 继承稳定上下文并独立多轮工作，不污染主对话。
 - **板端计划调度**：`agentd` 可对现有主任务创建一次性或固定间隔计划，安全复用会话和当前策略；忙碌与重启只合并一轮，不补跑历史，计划 Prompt 默认脱敏。
 - **开放模型与扩展**：内置 D-Robotics Kimi K3、Qwen 3.8 Max、GLM 5.2、DeepSeek V4 Flash 和 Pro，同时兼容 Pi Provider、MCP、packages、extensions、Skills、Prompt templates 和 themes。

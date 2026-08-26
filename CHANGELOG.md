@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.31.1
+
+- Add per-task Mac file access to Studio, defaulting to all locally readable files in read-only mode.
+- Recognize explicit Mac paths in messages, stream regular files to a private content-addressed board directory, verify SHA-256, reuse duplicates, and replace the prompt path before the Agent starts.
+- Keep the RDK system prompt byte-stable across turns by moving quality, memory, goal, and Agent collaboration state into hidden append-only runtime-context messages.
+- Add bounded Anthropic prompt-cache breakpoints for GLM-5.3 system, tool, and conversation prefixes with an automatic compatibility fallback.
+- Report explicit cache use and compatibility fallback counts through `/cache`.
+
 ## 0.31.0
 
 - Add every model currently advertised by the D-Robotics gateway to the TUI, setup command, Studio, and model diagnostics while preserving the historical DeepSeek Flash compatibility alias.

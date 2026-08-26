@@ -69,3 +69,14 @@ test("treats a model route change as a cache-prefix change", () => {
 
   assert.equal(getCacheMetrics().prefixChanges, 1);
 });
+
+test("reports explicit cache requests and compatibility fallback without retaining payloads", () => {
+  recordCacheObservation({ model: "glm-5.3", usage: { input: 10 }, systemPrompt: "same", tools: [], cacheMode: "explicit" });
+  recordCacheObservation({ model: "glm-5.3", usage: { input: 10 }, systemPrompt: "same", tools: [], cacheMode: "implicit-fallback" });
+
+  const metrics = getCacheMetrics();
+  assert.equal(metrics.explicitRequests, 1);
+  assert.equal(metrics.cacheFallbacks, 1);
+  assert.equal(metrics.latest.cacheMode, "implicit-fallback");
+  assert.match(formatCacheMetrics(), /1 explicit request\(s\) \| 1 compatibility fallback\(s\)/);
+});

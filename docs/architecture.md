@@ -88,12 +88,14 @@ daemon 停止、崩溃或板卡重启后，历史和元数据仍可读取，但�
 `extensions/rdk/index.ts` 是发行包必须加载的产品扩展入口，负责向 Pi 注册 Provider、工具、命令与生命周期事件，并编排各个独立模块。协议解析、底层安全判定和状态存储核心均由独立模块承担，入口只连接并执行这些策略：
 
 1. **`drobotics-provider.ts`**：编排 Anthropic-compatible 网络请求、超时、SSE 与有界缓冲回退，并生成 Pi 原生 thinking、text、tool call 和 usage 事件。
-2. **Provider helpers**：`drobotics-config.mjs`、`drobotics-payload.mjs`、`drobotics-response.mjs`、`anthropic-sse.mjs`、`cache-metrics.mjs` 和 `text-safety.mjs` 分别收口超时配置、请求转换、响应验证、有界分帧、缓存观测与 Unicode 修复，避免协议细节混入主编排。
+2. **Provider helpers**：`drobotics-config.mjs`、`drobotics-payload.mjs`、`drobotics-response.mjs`、`anthropic-sse.mjs`、`cache-metrics.mjs`、`runtime-context.mjs` 和 `text-safety.mjs` 分别收口超时配置、请求与缓存断点转换、响应验证、有界分帧、缓存观测、追加式运行上下文与 Unicode 修复，避免协议细节混入主编排。
 3. **入口中的板卡编排**：从 device tree、`/etc/version`、procfs、sysfs 和 RDK 工具路径取得实机证据，并按 X5 3.x、S100 4.x、S600 5.x 路由版本化知识。
 4. **`control-plane.mjs`、`runtime-safety.mjs` 与 `user-paths.mjs`**：实现权限和质量门辅助逻辑、脱敏、工作区指纹、路径解析及高风险 Shell 识别。
 5. **`memory-store.ts`、`goal-store.ts`、`hook-runner.ts`、`lsp-manager.ts` 与 `notifications.ts`**：分别管理 SQLite 状态、结构化 Hook 子进程、按需语言服务器和终端通知，入口只负责生命周期衔接。
 6. **`side-agent.ts`、`agent-collaboration.mjs` 及其会话和租约模块**：管理右侧窗格、独立 Pi RPC 子进程、多轮事件、公开主任务状态、主任务写优先级和有界并发。
 7. **板卡交互层**：渲染紧凑 RDK 专家角色，在 Pi footer 显示本机摘要，并注册 `/rdk`、`/doctor`、`/knowledge`、`/system-prompt`、`/btw` 和退出别名。
+
+Mac Studio 额外提供本机只读文件代理。它只处理用户消息中明确出现的本机绝对路径，在 Mac 进程内完成普通文件、符号链接、大小和 SHA-256 校验，再通过 SDK 的流式 SSH 输入写入板端私有内容寻址目录。Agent只收到板端副本路径，不获得 Mac文件系统句柄；本机访问模式按板卡和任务保存在 Studio本地，与板端审批、沙箱和网络边界相互独立。
 
 扩展继续使用 Pi 的 `read`、`bash`、`edit`、`write`、`grep`、`find` 和 `ls`，不维护同名工具的替代实现。Pi 的其他 Provider、扩展包、Skills、Prompt templates 和 themes 保持可用。
 

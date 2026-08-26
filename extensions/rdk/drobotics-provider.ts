@@ -16,7 +16,7 @@ import {
 import { iterateAnthropicSse, readBoundedBody } from "./anthropic-sse.mjs";
 import { recordCacheObservation } from "./cache-metrics.mjs";
 import { resolveGatewayTimeout } from "./drobotics-config.mjs";
-import { convertMessages, convertTools } from "./drobotics-payload.mjs";
+import { convertMessages, convertSystemPrompt, convertTools } from "./drobotics-payload.mjs";
 import {
   GatewayStreamError,
   IncompleteGatewayStreamError,
@@ -48,6 +48,13 @@ type DroboticsStreamOptions = SimpleStreamOptions & {
   timeoutMs?: number;
   temperature?: number;
 };
+
+function promptCacheEnabled(model: Model<Api>): boolean {
+  const configured = String(process.env.HOBOT_CODE_PROMPT_CACHE ?? "auto").trim().toLowerCase();
+  if (["0", "false", "off", "disabled"].includes(configured)) return false;
+  if (["1", "true", "on", "enabled"].includes(configured)) return true;
+  return model.id === "glm-5.3";
+}
 
 interface GatewayUsage {
   input_tokens?: number;
@@ -454,19 +461,29 @@ export function streamDrobotics(
         throw new Error("Model gateway temperature must be between 0 and 1");
       }
       const systemPrompt = context.systemPrompt ? toWellFormedText(context.systemPrompt) : undefined;
-      const convertedTools = convertTools(context.tools);
+      const usePromptCache = promptCacheEnabled(model);
+      const convertedTools = convertTools(context.tools, { cacheControl: usePromptCache });
       const body: JsonRecord = {
         model: model.id,
         max_tokens: maxTokens,
         stream: true,
-        system: systemPrompt,
+        system: convertSystemPrompt(systemPrompt, { cacheControl: usePromptCache }),
         messages: convertMessages(context.messages, {
           allowEmptyThinkingSignature: model.compat?.allowEmptySignature === true,
+          cacheControl: usePromptCache,
         }),
         tools: convertedTools,
         ...(budget ? { thinking: { type: "enabled", budget_tokens: budget } } : {}),
         ...(temperature === undefined ? {} : { temperature }),
       };
+      const uncachedBody: JsonRecord | undefined = usePromptCache ? {
+        ...body,
+        system: convertSystemPrompt(systemPrompt),
+        messages: convertMessages(context.messages, {
+          allowEmptyThinkingSignature: model.compat?.allowEmptySignature === true,
+        }),
+        tools: convertTools(context.tools),
+      } : undefined;
 
       const endpoint = `${(model.baseUrl || DEFAULT_DROBOTICS_BASE_URL).replace(/\/$/, "")}/v1/messages`;
 		const transport = extendedOptions.fetch ?? (modelEgressSocket
@@ -496,16 +513,23 @@ export function streamDrobotics(
         });
       };
 
-      let response = await request(body, "text/event-stream, application/json");
+      let activeBody = body;
+      let cacheMode = usePromptCache ? "explicit" : "implicit";
+      let response = await request(activeBody, "text/event-stream, application/json");
       let streamingFailure: { status: number; detail: string } | undefined;
       let attemptedBuffered = false;
+      if (!response.ok && uncachedBody && [400, 415, 422].includes(response.status)) {
+        activeBody = uncachedBody;
+        cacheMode = "implicit-fallback";
+        response = await request(activeBody, "text/event-stream, application/json");
+      }
       if (!response.ok) {
         const firstStatus = response.status;
         const firstDetail = (await readBoundedBody(response, 64 * 1024)).slice(0, 4096);
         if ([400, 415, 422].includes(firstStatus)) {
           streamingFailure = { status: firstStatus, detail: firstDetail };
           attemptedBuffered = true;
-          response = await request({ ...body, stream: false }, "application/json");
+          response = await request({ ...activeBody, stream: false }, "application/json");
         } else {
           throw new Error(`D-Robotics model gateway HTTP ${firstStatus}: ${firstDetail}`);
         }
@@ -524,7 +548,7 @@ export function streamDrobotics(
           attemptedBuffered = true;
           resetGatewayOutputForRetry(output);
           try {
-            const fallback = await request({ ...body, stream: false }, "application/json");
+            const fallback = await request({ ...activeBody, stream: false }, "application/json");
             if (!fallback.ok) {
               const detail = (await readBoundedBody(fallback, 64 * 1024)).slice(0, 4096);
               throw new Error(`HTTP ${fallback.status}: ${detail}`);
@@ -553,6 +577,7 @@ export function streamDrobotics(
         usage: output.usage,
         systemPrompt,
         tools: convertedTools,
+        cacheMode,
       });
       stream.push({ type: "done", reason: output.stopReason as "stop" | "length" | "toolUse" | "deferred", message: output });
       stream.end();

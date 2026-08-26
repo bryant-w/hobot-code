@@ -18,7 +18,12 @@ const networkLabels = {
   offline: 'Offline',
 };
 
-export function accessModePresentation({permissionMode = 'ask', sandboxMode = 'workspace', networkMode = 'shared'} = {}) {
+const localAccessLabels = {
+  'full-read': 'Mac read only',
+  none: 'No Mac files',
+};
+
+export function accessModePresentation({permissionMode = 'ask', sandboxMode = 'workspace', networkMode = 'shared', localAccessMode = 'full-read'} = {}) {
   let label = permissionLabels[permissionMode] || 'Custom';
   let tone = 'standard';
   if (sandboxMode === 'off') {
@@ -45,6 +50,7 @@ export function accessModePresentation({permissionMode = 'ask', sandboxMode = 'w
       permissionLabels[permissionMode] || permissionMode,
       sandboxLabels[sandboxMode] || sandboxMode,
       networkLabels[networkMode] || networkMode,
+      localAccessLabels[localAccessMode] || localAccessMode,
     ].join(' · '),
   };
 }

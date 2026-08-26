@@ -25,5 +25,5 @@ test('follow-up cards expose single-item cancel and explicit uncertain retry', (
 test('failed Studio submissions reuse the complete prompt and attachment payload key', () => {
   assert.match(appSource, /pendingPromptRetry\.fingerprint === fingerprint/);
   assert.match(appSource, /images: submittedImages\.map/);
-  assert.match(appSource, /setPendingPromptRetry\(\{taskId: selectedTask\.id, prompt, fingerprint, key: retryKey\}\)/);
+  assert.match(appSource, /setPendingPromptRetry\(\{taskId: selectedTask\.id, prompt: preparedPrompt, fingerprint, key: retryKey\}\)/);
 });

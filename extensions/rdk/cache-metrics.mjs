@@ -13,6 +13,8 @@ function emptyTotals() {
     cacheWrite: 0,
     transitions: 0,
     prefixChanges: 0,
+    explicitRequests: 0,
+    cacheFallbacks: 0,
   };
 }
 
@@ -62,7 +64,7 @@ export function resetCacheMetrics() {
   totals = emptyTotals();
 }
 
-export function recordCacheObservation({ model, usage, systemPrompt, tools }) {
+export function recordCacheObservation({ model, usage, systemPrompt, tools, cacheMode = "implicit" }) {
   const input = tokenCount(usage?.input);
   const cacheRead = tokenCount(usage?.cacheRead);
   const cacheWrite = tokenCount(usage?.cacheWrite);
@@ -84,6 +86,7 @@ export function recordCacheObservation({ model, usage, systemPrompt, tools }) {
     hitRate: calculateCacheHitRate({ input, cacheRead, cacheWrite }),
     ...fingerprints,
     prefixStable,
+    cacheMode,
   };
   totals.requests += 1;
   totals.input += input;
@@ -91,13 +94,15 @@ export function recordCacheObservation({ model, usage, systemPrompt, tools }) {
   totals.cacheWrite += cacheWrite;
   if (previous) totals.transitions += 1;
   if (prefixStable === false) totals.prefixChanges += 1;
+  if (cacheMode === "explicit") totals.explicitRequests += 1;
+  if (cacheMode === "implicit-fallback") totals.cacheFallbacks += 1;
   observations.push(observation);
   if (observations.length > MAX_RECENT_OBSERVATIONS) observations.shift();
   return { ...observation };
 }
 
 export function getCacheMetrics() {
-  const { requests, input, cacheRead, cacheWrite, transitions, prefixChanges } = totals;
+  const { requests, input, cacheRead, cacheWrite, transitions, prefixChanges, explicitRequests, cacheFallbacks } = totals;
   const totalInput = input + cacheRead + cacheWrite;
   return {
     requests,
@@ -108,6 +113,8 @@ export function getCacheMetrics() {
     hitRate: percent(cacheRead, totalInput),
     transitions,
     prefixChanges,
+    explicitRequests,
+    cacheFallbacks,
     latest: observations.length > 0 ? { ...observations.at(-1) } : undefined,
     recent: observations.map((item) => ({ ...item })),
   };
@@ -130,6 +137,7 @@ export function formatCacheMetrics() {
     `Hit rate: ${formatPercent(metrics.hitRate)} aggregate | ${formatPercent(latest.hitRate)} latest`,
     `Input: ${formatTokens(metrics.totalInput)} total | ${formatTokens(metrics.cacheRead)} read | ${formatTokens(metrics.cacheWrite)} write | ${formatTokens(metrics.input)} uncached`,
     `Prefix stability: ${prefix}`,
+    `Protocol: ${metrics.explicitRequests} explicit request(s) | ${metrics.cacheFallbacks} compatibility fallback(s)`,
     `Fingerprints: system ${latest.systemFingerprint.slice(0, 12)} | tools ${latest.toolsFingerprint.slice(0, 12)}`,
     "Metric: cacheRead / (input + cacheRead + cacheWrite). Hashes contain no prompt or tool content.",
   ].join("\n");

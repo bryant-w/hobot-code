@@ -42,6 +42,7 @@ ANTHROPIC_MODEL=kimi-k3
 API_TIMEOUT_MS=3000000
 HOBOT_CODE_MODEL_CONTEXT_WINDOW=1000000
 HOBOT_CODE_MODEL_MAX_TOKENS=8192
+HOBOT_CODE_PROMPT_CACHE=auto
 ```
 
 Hobot Code 的内置目录与 D-Robotics 网关在 2026-08-22 返回的模型清单保持一致，并额外保留旧会话使用的兼容模型组：
@@ -56,7 +57,7 @@ Hobot Code 的内置目录与 D-Robotics 网关在 2026-08-22 返回的模型清
 
 模型选择时需加 Provider 前缀，例如 `drobotics/kimi-k2.6`。默认选择 Kimi K3，thinking 等级为 `max`。`ANTHROPIC_MODEL` 可覆盖默认选择，但不会移除其他内置模型。`@latest` 是网关动态别名，其实际后端和能力可能随网关升级变化；用于可复现任务时应优先选择固定 ID，并在升级后执行 `hobot model probe`。
 
-Kimi、Qwen 和 GLM 使用同一网关的 Anthropic Messages 路径；DeepSeek 使用 OpenAI Chat Completions 路径，thinking off 映射为 `chat_template_kwargs.enable_thinking=false`。模型图片能力按实际协议探测结果声明，未验证或文本模型不会显示图片上传能力。`API_TIMEOUT_MS` 是单次网关请求的硬超时，单位为毫秒，默认值为 3000000，并优先于 Pi 传入的 Provider 超时；数值会限制在 1000 到 3600000 之间，空值或非数值回退到默认值。Pi 的 Agent 请求超时和 HTTP 空闲超时也默认设为 3000000 ms。上下文窗口和最大输出来自上面的 Provider 环境变量，不由 `settings.json` 的 TUI 设置决定。
+Kimi、Qwen 和 GLM 使用同一网关的 Anthropic Messages 路径；DeepSeek 使用 OpenAI Chat Completions 路径，thinking off 映射为 `chat_template_kwargs.enable_thinking=false`。模型图片能力按实际协议探测结果声明，未验证或文本模型不会显示图片上传能力。`API_TIMEOUT_MS` 是单次网关请求的硬超时，单位为毫秒，默认值为 3000000，并优先于 Pi 传入的 Provider 超时；数值会限制在 1000 到 3600000 之间，空值或非数值回退到默认值。Pi 的 Agent 请求超时和 HTTP 空闲超时也默认设为 3000000 ms。上下文窗口和最大输出来自上面的 Provider 环境变量，不由 `settings.json` 的 TUI 设置决定。`HOBOT_CODE_PROMPT_CACHE=auto` 对 GLM-5.3 启用显式缓存断点；`on` 对所有 Anthropic-compatible 模型启用，`off` 禁用。网关明确拒绝缓存字段时会自动回退到原有隐式缓存请求。
 
 Kimi、Qwen 和 GLM 系列使用 Hobot Code 的 Anthropic SSE 适配器，实时转发 thinking、文本、工具参数和 usage；端点明确不支持流式格式或返回普通 JSON 时，才回退到有字节上限的缓冲读取。DeepSeek 系列使用 Pi 的 OpenAI-compatible 流式实现，保留工具调用、中断、usage 和多轮历史语义。两条路径都受统一的超时、会话和缓存观测约束。
 
@@ -192,6 +193,8 @@ hobot update --extensions
 ```text
 cacheRead / (input + cacheRead + cacheWrite)
 ```
+
+GLM-5.3 默认在稳定 System Prompt、工具契约和最新会话尾部设置最多三个标准 Anthropic `cache_control` 断点。质量门、记忆召回、持久目标和 Agent 协作状态不再逐轮改写 System Prompt，而是作为隐藏的追加式运行上下文消息进入会话；这既保留状态和安全边界，也避免前置内容变化使整段历史缓存失效。`/cache` 的 Protocol 行会显示显式缓存请求数和兼容性回退数。
 
 输出还包含系统 Prompt 与有序工具契约的 SHA-256 指纹，用来判断相邻请求是否更换模型或改变稳定前缀。这里只保存哈希，不记录 Prompt、工具说明、会话正文或凭据。部分兼容网关可能不返回缓存字段，此时 `0%` 只表示 Hobot Code 没有收到可计量的 cache-read token，不能据此证明上游未使用缓存。实机基线与适用边界见[缓存效率](cache-efficiency.md)。
 

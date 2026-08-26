@@ -39,6 +39,8 @@ import {friendlyError} from './friendly-error.js';
 import {includedModelSummary, includedProviderGroups} from './provider-catalog.js';
 import {applyTheme, readThemePreference, resolveTheme, saveThemePreference} from './appearance-theme.js';
 import type {ThemePreference} from './appearance-theme.js';
+import {DEFAULT_LOCAL_ACCESS, readLocalAccess, saveLocalAccess} from './local-access.js';
+import type {LocalAccessMode} from './local-access.js';
 import type {AssistantConversationItem, ToolActivity, UserConversationItem} from './conversation-model.js';
 import type {AddManagedProviderRequest, Approval, Board, BoardUpdateCheck, BoardUpdateResult, BPUBenchmarkRequest, BPUBenchmarkResult, BPUModelInfo, BPUTensorDesc, Connection, DeploymentInspection, DeploymentStatus, DiagnosticReport, EventPage, ExtensionCatalog, FollowupMessage, ImageContent, ManagedProvider, ModelConformance, ModelHealth, ModelOption, ModelQualification, ModelRDKMatrix, ModelRDKProbe, ModelRDKProfileStatus, ModelRuntimeProbe, ProviderMutationResult, Schedule, StartDeploymentRequest, StudioUpdateCheck, SupportBundle, SystemSnapshot, Task, TaskEvent, WorkspaceChanges, WorkspaceDelivery, WorkspaceIsolation, WorkspaceListing} from './types';
 
@@ -115,6 +117,7 @@ function App() {
   const [unreadTasks, setUnreadTasks] = useState<Set<string>>(new Set());
   const [showInspector, setShowInspector] = useState(false);
   const [themePreference, setThemePreference] = useState<ThemePreference>(() => readThemePreference(window.localStorage));
+  const [localAccessMode, setLocalAccessMode] = useState(DEFAULT_LOCAL_ACCESS);
   const [systemPrefersDark, setSystemPrefersDark] = useState(() => window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? true);
   const [showAppearance, setShowAppearance] = useState(false);
   const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(new Set());
@@ -163,6 +166,9 @@ function App() {
   const appearanceRef = useRef<HTMLDivElement>(null);
 
   const boardId = connection?.board.id ?? '';
+	useEffect(() => {
+	  setLocalAccessMode(readLocalAccess(window.localStorage, boardId, selectedTask?.id ?? ''));
+	}, [boardId, selectedTask?.id]);
 	historySupportsBefore.current = Boolean(connection?.capabilities?.capabilities.includes('events.page.before.v1'));
 	const updateHasLaterHistory = useCallback((value: boolean) => {
 		hasLaterHistoryRef.current = value;
@@ -702,7 +708,7 @@ function App() {
   const selectedPermissionMode = selectedTask?.permissionMode ?? 'ask';
   const selectedSandboxMode = selectedTask?.sandboxMode ?? (selectedPermissionMode === 'review' ? 'review' : 'workspace');
   const selectedNetworkMode = selectedTask?.networkMode ?? 'shared';
-  const accessPresentation = accessModePresentation({permissionMode: selectedPermissionMode, sandboxMode: selectedSandboxMode, networkMode: selectedNetworkMode});
+  const accessPresentation = accessModePresentation({permissionMode: selectedPermissionMode, sandboxMode: selectedSandboxMode, networkMode: selectedNetworkMode, localAccessMode});
   const canCreateBlankSideTask = Boolean(connection?.capabilities?.capabilities.includes('tasks.fork.deferred-prompt.v1'));
   const canChangeModel = Boolean(connectionState === 'online' && selectedTask && (draftSelected || selectedTask.status === 'idle' || terminalStatuses.has(selectedTask.status)) && !busy && !modelQualificationStage && !checkingModel && !verifyingModel);
   const canChangePermissions = canChangeModel;
@@ -790,11 +796,14 @@ function App() {
     setAttachments([]);
     followsOutput.current = true;
     try {
+      const localPreparation = await api.prepareLocalPrompt(boardId, prompt, localAccessMode);
+      const preparedPrompt = localPreparation.prompt;
+      if (!draftSelected) setOptimisticPrompt({taskId: selectedTask.id, text: preparedPrompt, time: submittedAt, attachments: submittedImages});
       let nextTask: Task | undefined;
       if (draftSelected) nextTask = await api.startTask(boardId, {
         name: selectedTask.name === 'New task' ? '' : selectedTask.name,
         cwd: selectedTask.cwd,
-        prompt,
+        prompt: preparedPrompt,
         images: submittedImages,
         approve: false,
 		model: selectedModel || undefined,
@@ -804,16 +813,16 @@ function App() {
 		sandboxMode: connection?.capabilities?.capabilities.includes('tasks.sandbox.v1') ? selectedSandboxMode : undefined,
 		networkMode: connection?.capabilities?.capabilities.includes('tasks.network.v1') ? selectedNetworkMode : undefined,
 	  });
-      else if (editingMessage !== null) nextTask = await api.forkTask(boardId, {taskId: selectedTask.id, sequence: editingMessage, prompt, images: submittedImages, kind: 'edit', model: selectedModel});
-      else if (selectedComposerMode === 'resume') nextTask = await api.resumeTask(boardId, selectedTask.id, prompt, submittedImages);
-      else if (selectedComposerMode === 'restart') nextTask = await api.restartTask(boardId, selectedTask.id, prompt, submittedImages);
+      else if (editingMessage !== null) nextTask = await api.forkTask(boardId, {taskId: selectedTask.id, sequence: editingMessage, prompt: preparedPrompt, images: submittedImages, kind: 'edit', model: selectedModel});
+      else if (selectedComposerMode === 'resume') nextTask = await api.resumeTask(boardId, selectedTask.id, preparedPrompt, submittedImages);
+      else if (selectedComposerMode === 'restart') nextTask = await api.restartTask(boardId, selectedTask.id, preparedPrompt, submittedImages);
       else {
 		const idempotencyKey = `studio-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-		const fingerprint = JSON.stringify({prompt, images: submittedImages.map((image) => ({type: image.type, data: image.data, mimeType: image.mimeType, name: image.name}))});
+		const fingerprint = JSON.stringify({prompt: preparedPrompt, images: submittedImages.map((image) => ({type: image.type, data: image.data, mimeType: image.mimeType, name: image.name}))});
 		const sameRetry = pendingPromptRetry?.taskId === selectedTask.id && pendingPromptRetry.fingerprint === fingerprint;
 		const retryKey = sameRetry && !pendingPromptRetry.uncertain ? pendingPromptRetry.key : idempotencyKey;
-		setPendingPromptRetry({taskId: selectedTask.id, prompt, fingerprint, key: retryKey});
-		const result = await api.sendPrompt(boardId, selectedTask.id, prompt, submittedImages, retryKey);
+		setPendingPromptRetry({taskId: selectedTask.id, prompt: preparedPrompt, fingerprint, key: retryKey});
+		const result = await api.sendPrompt(boardId, selectedTask.id, preparedPrompt, submittedImages, retryKey);
 		if (result?.uncertain) {
 		  setOptimisticPrompt(null);
 		  setComposer(prompt);
@@ -831,6 +840,7 @@ function App() {
 		}
 		setPendingPromptRetry(null);
 	  }
+      if (localPreparation.files.length > 0) setNotice(`${localPreparation.files.length} Mac file${localPreparation.files.length === 1 ? '' : 's'} imported read-only to the board.`);
       if (isCurrentTarget(boardId, sourceTaskId, activeBoardId.current, selectedTaskId.current)) {
         setEditingMessage(null);
         setEditingNeedsImages(false);
@@ -842,8 +852,9 @@ function App() {
 	  }
       await refreshTasks();
       if (nextTask && isCurrentTarget(boardId, sourceTaskId, activeBoardId.current, selectedTaskId.current)) {
+        saveLocalAccess(window.localStorage, boardId, nextTask.id, localAccessMode);
         selectedTaskId.current = nextTask.id;
-        setOptimisticPrompt({taskId: nextTask.id, text: prompt, time: submittedAt, attachments: submittedImages});
+        setOptimisticPrompt({taskId: nextTask.id, text: localPreparation.prompt, time: submittedAt, attachments: submittedImages});
         setSelectedTask(nextTask);
         setWatchRevision((revision) => revision + 1);
       }
@@ -1179,6 +1190,16 @@ function App() {
       if (isCurrentTarget(boardId, sourceTaskId, activeBoardId.current, selectedTaskId.current)) setError(friendlyError(String(reason)));
     } finally {
       setBusy(false);
+    }
+  }
+
+  function changeLocalAccess(mode: LocalAccessMode) {
+    if (!selectedTask) return;
+    try {
+      saveLocalAccess(window.localStorage, boardId, selectedTask.id, mode);
+      setLocalAccessMode(mode);
+    } catch (reason) {
+      setError(friendlyError(String(reason)));
     }
   }
 
@@ -1751,7 +1772,7 @@ function App() {
       {showDiagnostics && <ReadinessDiagnosticsDialog report={diagnostics} loading={diagnosticsLoading} failure={diagnosticsError} onRefresh={() => void openDiagnostics()} onRepair={(action) => void repairDiagnostic(action)} onClose={() => setShowDiagnostics(false)} />}
       {showBPUBenchmark && connection && <BPUBenchmarkDialog boardId={connection.board.id} boardName={connection.board.name} snapshot={snapshot} cwd={selectedTask?.cwd ?? '/root'} onClose={() => setShowBPUBenchmark(false)} />}
       {showModelReadiness && connection && effectiveModel && <ModelReadinessDialog model={effectiveModel} snapshot={snapshot} capabilities={connection.capabilities?.capabilities ?? []} qualification={qualificationForModel} health={currentModelHealth} conformance={currentModelConformance} runtimeProbe={currentModelRuntimeProbe} rdkProbe={currentModelRDKProbe} rdkMatrix={currentModelRDKMatrix} activeStage={checkingModel ? 'health' : verifyingModel ? 'protocol' : modelQualificationStage} activeProfile={modelQualificationProfile} failure={modelReadinessError} onRunHealth={() => void checkModelHealth()} onRunProtocol={() => void verifyModelConformance()} onRunRuntime={() => void probeModelRuntime()} onRunRDK={(profile) => void probeModelRDK(profile)} onClose={() => setShowModelReadiness(false)} />}
-      {showAccessSettings && selectedTask && <AccessSettingsDialog permissionMode={selectedPermissionMode} approvalModel={selectedTask.approvalModel || ''} models={models} sandboxMode={selectedSandboxMode} networkMode={selectedNetworkMode} workspaceMode={selectedTask.workspaceMode || 'shared'} summary={accessPresentation.summary} hasAutoReview={Boolean(connection?.capabilities?.capabilities.includes('tasks.permissions.llm-review.v1'))} hasApprovalModel={Boolean(connection?.capabilities?.capabilities.includes('tasks.permissions.model.v1'))} hasWorkspace={Boolean(draftSelected && connection?.capabilities?.capabilities.includes('workspaces.isolation.v1'))} workspaceEligible={Boolean(workspaceInspection?.result?.eligible)} workspaceLoading={workspaceInspectionLoading} workspaceReason={workspaceInspection?.result?.reason || ''} hasSandbox={Boolean(selectedTask.sandboxMode || connection?.capabilities?.capabilities.includes('tasks.sandbox.v1'))} hasNetwork={Boolean(selectedTask.networkMode || connection?.capabilities?.capabilities.includes('tasks.network.v1'))} sandboxAvailable={Boolean(connection?.capabilities?.sandbox?.available)} networkModes={connection?.capabilities?.sandbox?.networkModes ?? []} modelOnly={effectiveModel?.modelOnly === true} canChangePermissions={canChangePermissions} canChangeSandbox={canChangeSandbox} canChangeNetwork={canChangeNetwork} canStopWorker={canStopBoundaryWorker} busy={busy} onWorkspace={changeWorkspaceMode} onPermission={(mode) => void changePermissionMode(mode)} onApprovalModel={(model) => void changeApprovalModel(model)} onSandbox={(mode) => void changeSandboxMode(mode)} onNetwork={(mode) => void changeNetworkMode(mode)} onStopWorker={() => void stopTask()} onClose={() => setShowAccessSettings(false)} />}
+	  {showAccessSettings && selectedTask && <AccessSettingsDialog permissionMode={selectedPermissionMode} approvalModel={selectedTask.approvalModel || ''} models={models} sandboxMode={selectedSandboxMode} networkMode={selectedNetworkMode} localAccessMode={localAccessMode} workspaceMode={selectedTask.workspaceMode || 'shared'} summary={accessPresentation.summary} hasAutoReview={Boolean(connection?.capabilities?.capabilities.includes('tasks.permissions.llm-review.v1'))} hasApprovalModel={Boolean(connection?.capabilities?.capabilities.includes('tasks.permissions.model.v1'))} hasWorkspace={Boolean(draftSelected && connection?.capabilities?.capabilities.includes('workspaces.isolation.v1'))} workspaceEligible={Boolean(workspaceInspection?.result?.eligible)} workspaceLoading={workspaceInspectionLoading} workspaceReason={workspaceInspection?.result?.reason || ''} hasSandbox={Boolean(selectedTask.sandboxMode || connection?.capabilities?.capabilities.includes('tasks.sandbox.v1'))} hasNetwork={Boolean(selectedTask.networkMode || connection?.capabilities?.capabilities.includes('tasks.network.v1'))} sandboxAvailable={Boolean(connection?.capabilities?.sandbox?.available)} networkModes={connection?.capabilities?.sandbox?.networkModes ?? []} modelOnly={effectiveModel?.modelOnly === true} canChangePermissions={canChangePermissions} canChangeSandbox={canChangeSandbox} canChangeNetwork={canChangeNetwork} canStopWorker={canStopBoundaryWorker} busy={busy} onWorkspace={changeWorkspaceMode} onPermission={(mode) => void changePermissionMode(mode)} onApprovalModel={(model) => void changeApprovalModel(model)} onSandbox={(mode) => void changeSandboxMode(mode)} onNetwork={(mode) => void changeNetworkMode(mode)} onLocalAccess={changeLocalAccess} onStopWorker={() => void stopTask()} onClose={() => setShowAccessSettings(false)} />}
       {showDeployment && selectedTask && snapshot && <DeploymentDialog boardId={boardId} cwd={selectedTask.cwd} snapshot={snapshot} models={models} busy={busy} onClose={() => setShowDeployment(false)} onStart={startDeployment} />}
 	      {showChanges && selectedTask && boardId && <WorkspaceChangesDialog boardId={boardId} task={selectedTask} canDeliver={Boolean(connection?.capabilities?.capabilities.includes('workspaces.delivery.v1'))} onClose={() => setShowChanges(false)} />}
       {deleteTarget && <DeleteDialog target={deleteTarget} busy={busy} onClose={() => setDeleteTarget(null)} onDelete={confirmDelete} />}
@@ -1870,12 +1891,13 @@ function ImagePickerButton({disabled, title, onPick, onError}: {disabled: boolea
   return <><button className="icon-button compact attach-button" type="button" title={title} disabled={disabled} onClick={() => input.current?.click()}><Paperclip size={15} /></button><input ref={input} className="file-input" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple onChange={(event) => {const files = [...(event.target.files ?? [])]; event.target.value = ''; void Promise.all(files.map(prepareImage)).then(onPick).catch((reason) => onError(friendlyError(String(reason))));}} /></>;
 }
 
-function AccessSettingsDialog({permissionMode, approvalModel, models, sandboxMode, networkMode, workspaceMode, summary, hasAutoReview, hasApprovalModel, hasWorkspace, workspaceEligible, workspaceLoading, workspaceReason, hasSandbox, hasNetwork, sandboxAvailable, networkModes, modelOnly, canChangePermissions, canChangeSandbox, canChangeNetwork, canStopWorker, busy, onWorkspace, onPermission, onApprovalModel, onSandbox, onNetwork, onStopWorker, onClose}: {
+function AccessSettingsDialog({permissionMode, approvalModel, models, sandboxMode, networkMode, localAccessMode, workspaceMode, summary, hasAutoReview, hasApprovalModel, hasWorkspace, workspaceEligible, workspaceLoading, workspaceReason, hasSandbox, hasNetwork, sandboxAvailable, networkModes, modelOnly, canChangePermissions, canChangeSandbox, canChangeNetwork, canStopWorker, busy, onWorkspace, onPermission, onApprovalModel, onSandbox, onNetwork, onLocalAccess, onStopWorker, onClose}: {
   permissionMode: string;
   approvalModel: string;
   models: ModelOption[];
   sandboxMode: string;
   networkMode: string;
+  localAccessMode: LocalAccessMode;
   workspaceMode: string;
   summary: string;
   hasAutoReview: boolean;
@@ -1899,6 +1921,7 @@ function AccessSettingsDialog({permissionMode, approvalModel, models, sandboxMod
   onApprovalModel: (model: string) => void;
   onSandbox: (mode: string) => void;
   onNetwork: (mode: string) => void;
+  onLocalAccess: (mode: LocalAccessMode) => void;
   onStopWorker: () => void;
   onClose: () => void;
 }) {
@@ -1906,13 +1929,14 @@ function AccessSettingsDialog({permissionMode, approvalModel, models, sandboxMod
   const boundariesLocked = (hasSandbox && !canChangeSandbox) || (hasNetwork && !canChangeNetwork);
   return <div className="modal-backdrop"><section className="modal access-settings-modal" role="dialog" aria-modal="true" aria-labelledby="access-settings-title">
     <div className="modal-header"><div><span className="modal-eyebrow">Agent defaults</span><h2 id="access-settings-title">Task settings</h2></div><button className="icon-button" title="Close" onClick={onClose}><X size={18} /></button></div>
-    <div className="access-settings-summary"><ShieldCheck size={18} /><div><strong>{summary}</strong><span>These boundaries are enforced on the board, not by Studio.</span></div></div>
+    <div className="access-settings-summary"><ShieldCheck size={18} /><div><strong>{summary}</strong><span>Board boundaries are enforced on the board. Mac file access is enforced by Studio.</span></div></div>
     <div className="form-grid access-settings-grid">
       {hasWorkspace && <label><span>Workspace</span><select aria-label="Workspace mode" value={workspaceMode} disabled={busy || workspaceLoading} onChange={(event) => onWorkspace(event.target.value)}><option value="shared">Shared project</option><option value="worktree" disabled={!workspaceEligible}>Isolated worktree</option></select><small>{workspaceLoading ? 'Checking whether this project supports isolation.' : workspaceReason || 'An isolated worktree keeps concurrent Agent edits separate.'}</small></label>}
       <label><span>Approvals</span><select aria-label="Approval mode" value={permissionMode} disabled={busy || !canChangePermissions} onChange={(event) => onPermission(event.target.value)}><option value="review">Review only</option><option value="ask">Ask for changes</option>{hasAutoReview && <option value="auto-review" title="Routine actions run directly; an independent model reviews meaningful risk">Approve for me</option>}{permissionMode === 'auto-review' && !hasAutoReview && <option value="auto-review" disabled>Approve for me (update board)</option>}<option value="developer">Developer</option></select><small>{permissionMode === 'auto-review' ? 'Routine actions run directly. An independent model reviews meaningful side effects; only exceptional high-impact actions require you.' : 'Controls who decides when a tool needs approval.'}</small></label>
       {permissionMode === 'auto-review' && hasApprovalModel && <label><span>Approval model</span><select aria-label="Approval model" value={approvalModel} disabled={busy || !canChangePermissions} onChange={(event) => onApprovalModel(event.target.value)}><option value="">Follow Agent model</option>{models.map((model) => <option key={`${model.provider}/${model.id}`} value={`${model.provider}/${model.id}`}>{model.name || model.id} · {model.provider}</option>)}</select><small>Runs in an isolated, tool-free review context. This does not change the Agent model.</small></label>}
       {hasSandbox && <label><span>Board access</span><select aria-label="OS sandbox" value={sandboxMode} disabled={busy || !canChangeSandbox} onChange={(event) => onSandbox(event.target.value)}><option value="review" disabled={!sandboxAvailable}>Read only</option><option value="workspace" disabled={!sandboxAvailable}>Workspace</option><option value="system" disabled={!sandboxAvailable}>Board hardware</option><option value="off" disabled={networkMode !== 'shared'}>No sandbox</option></select><small>Limits files, devices, and Linux capabilities independently from approval review.</small></label>}
       {hasNetwork && <label><span>Network</span><select aria-label="Network boundary" value={networkMode} disabled={busy || !canChangeNetwork} onChange={(event) => onNetwork(event.target.value)}><option value="shared">Network</option><option value="model-only" disabled={!modelOnly || !restrictedNetwork || !networkModes.includes('model-only')}>Model only</option><option value="offline" disabled={!restrictedNetwork || !networkModes.includes('offline')}>Offline</option></select><small>Separates model access from general tool networking.</small></label>}
+      <label><span>Mac access</span><select aria-label="Mac file access" value={localAccessMode} disabled={busy} onChange={(event) => onLocalAccess(event.target.value as LocalAccessMode)}><option value="full-read">All files (read only)</option><option value="none">No local files</option></select><small>Explicit Mac paths in messages are read by Studio and transferred as immutable board copies. This never grants Mac write access.</small></label>
     </div>
     {boundariesLocked && <div className="access-settings-note boundary-locked"><Info size={14} /><span>Board access and Network are fixed while this Agent worker exists, including when it is Ready. Stop the Agent to unlock them, then change the settings and Resume. Approvals and the approval model can still change while Ready.</span>{canStopWorker && <button className="secondary-button" type="button" onClick={onStopWorker} disabled={busy}><Square size={12} fill="currentColor" />Stop Agent</button>}</div>}
     {sandboxMode === 'off' && <div className="access-settings-note danger"><AlertTriangle size={14} /><span>No sandbox gives tools the board user's host access and requires shared networking.</span></div>}

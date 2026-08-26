@@ -12,7 +12,7 @@ import {
   normalizeGatewayTimeout,
   resolveGatewayTimeout,
 } from "../extensions/rdk/drobotics-config.mjs";
-import { convertMessages } from "../extensions/rdk/drobotics-payload.mjs";
+import { convertMessages, convertSystemPrompt, convertTools } from "../extensions/rdk/drobotics-payload.mjs";
 import {
   GatewayStreamError,
   IncompleteGatewayStreamError,
@@ -314,6 +314,35 @@ test("gateway history preserves complete tool-call sequences", () => {
   ]);
 });
 
+test("GLM prompt caching places bounded breakpoints on stable request sections", () => {
+  assert.deepEqual(convertSystemPrompt("stable system", { cacheControl: true }), [{
+    type: "text",
+    text: "stable system",
+    cache_control: { type: "ephemeral" },
+  }]);
+  assert.equal(convertSystemPrompt("stable system"), "stable system");
+
+  const tools = convertTools([
+    { name: "read", description: "Read", parameters: { type: "object" } },
+    { name: "bash", description: "Run", parameters: { type: "object" } },
+  ], { cacheControl: true });
+  assert.equal(tools[0].cache_control, undefined);
+  assert.deepEqual(tools[1].cache_control, { type: "ephemeral" });
+
+  const messages = convertMessages([
+    { role: "user", content: "first" },
+    { role: "assistant", content: [{ type: "text", text: "answer" }] },
+    { role: "user", content: "latest runtime context" },
+  ], { cacheControl: true });
+  assert.equal(messages[0].content, "first");
+  assert.equal(messages[1].content[0].cache_control, undefined);
+  assert.deepEqual(messages[2].content, [{
+    type: "text",
+    text: "latest runtime context",
+    cache_control: { type: "ephemeral" },
+  }]);
+});
+
 test("gateway history repairs interrupted and partial tool-call sequences", () => {
   const interrupted = convertMessages([
     { role: "assistant", content: [{ type: "toolCall", id: "tool-1", name: "bash", arguments: { command: "sleep 1" } }] },
@@ -493,6 +522,53 @@ test("D-Robotics provider fallback state machine", async (t) => {
     assert.equal(metrics.cacheRead, 2);
     assert.equal(metrics.cacheWrite, 1);
     assert.equal(metrics.latest.model, "kimi-k3");
+  });
+
+  await t.test("GLM 5.3 sends explicit cache breakpoints and records the protocol", async () => {
+    cacheMetrics.resetCacheMetrics();
+    const requests = [];
+    const fetch = fakeFetchSequence([jsonResponse(bufferedMessage("glm-cache"))], requests);
+    const context = {
+      systemPrompt: "stable system",
+      messages: [{ role: "user", content: "hello" }],
+      tools: [{ name: "read", description: "Read", parameters: { type: "object" } }],
+    };
+
+    const events = await collectProviderEvents(streamDrobotics(
+      providerModel("glm-5.3"),
+      context,
+      providerOptions(fetch),
+    ));
+
+    assert.equal(events.at(-1).type, "done");
+    assert.deepEqual(requests[0].body.system[0].cache_control, { type: "ephemeral" });
+    assert.deepEqual(requests[0].body.messages[0].content[0].cache_control, { type: "ephemeral" });
+    assert.deepEqual(requests[0].body.tools[0].cache_control, { type: "ephemeral" });
+    assert.equal(cacheMetrics.getCacheMetrics().explicitRequests, 1);
+    assert.equal(cacheMetrics.getCacheMetrics().latest.cacheMode, "explicit");
+  });
+
+  await t.test("GLM 5.3 retries once without cache controls when a gateway rejects them", async () => {
+    cacheMetrics.resetCacheMetrics();
+    const requests = [];
+    const fetch = fakeFetchSequence([
+      jsonResponse({ error: { message: "cache_control unsupported" } }, 400),
+      jsonResponse(bufferedMessage("glm-cache-fallback")),
+    ], requests);
+
+    const events = await collectProviderEvents(streamDrobotics(
+      providerModel("glm-5.3"),
+      { systemPrompt: "stable system", messages: [{ role: "user", content: "hello" }], tools: [] },
+      providerOptions(fetch),
+    ));
+
+    assert.equal(events.at(-1).type, "done");
+    assert.equal(requests.length, 2);
+    assert.equal(Array.isArray(requests[0].body.system), true);
+    assert.equal(requests[1].body.system, "stable system");
+    assert.equal(requests[1].body.messages[0].content, "hello");
+    assert.equal(cacheMetrics.getCacheMetrics().cacheFallbacks, 1);
+    assert.equal(cacheMetrics.getCacheMetrics().latest.cacheMode, "implicit-fallback");
   });
 
   await t.test("a non-standard empty stream error retries once through the buffered gateway", async () => {

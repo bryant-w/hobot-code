@@ -41,6 +41,7 @@ import {
 } from "./control-plane.mjs";
 import { formatAgentCollaboration, readAgentCollaboration, readEphemeralSideCollaboration, sideAgentWorkspaceWriteBlocked } from "./agent-collaboration.mjs";
 import { formatCacheMetrics, recordCacheObservation, resetCacheMetrics } from "./cache-metrics.mjs";
+import { buildTurnRuntimeContext, turnRuntimeContextMessage } from "./runtime-context.mjs";
 import { BUILTIN_DROBOTICS_MODELS, createDroboticsModelConfig } from "./drobotics-models.mjs";
 import { DEFAULT_DROBOTICS_BASE_URL, streamDrobotics } from "./drobotics-provider.ts";
 import { GoalStore, type GoalRecord } from "./goal-store.ts";
@@ -1614,18 +1615,21 @@ export default function rdkExtension(pi: ExtensionAPI) {
         ].join("\n")
       : undefined;
     const collaborationContext = formatAgentCollaboration(await currentAgentCollaboration());
-    const dynamicContext = [qualityContext, memoryContext, goalContext, collaborationContext, openExplorerPromptContext].filter(Boolean).join("\n\n");
-    const systemPrompt = [event.systemPrompt, expertPrompt, dynamicContext].filter(Boolean).join("\n\n");
+    const dynamicContext = buildTurnRuntimeContext([qualityContext, memoryContext, goalContext, collaborationContext]);
+    const systemPrompt = [event.systemPrompt, expertPrompt, openExplorerPromptContext].filter(Boolean).join("\n\n");
     lastPromptSnapshot = {
-      text: systemPrompt,
+      text: [systemPrompt, dynamicContext].filter(Boolean).join("\n\n"),
       baseChars: event.systemPrompt.length,
       rdkChars: expertPrompt.length,
-      dynamicChars: dynamicContext.length,
+      dynamicChars: dynamicContext?.length ?? 0,
       qualityGateActive: Boolean(qualityContext),
       recalledMemories: recalled.length,
       persistentGoalActive: Boolean(goalContext),
     };
-    return { systemPrompt };
+    return {
+      systemPrompt,
+      ...(dynamicContext ? { message: turnRuntimeContextMessage(dynamicContext) } : {}),
+    };
   });
 
   pi.on("session_shutdown", async () => {

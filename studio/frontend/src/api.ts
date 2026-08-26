@@ -122,6 +122,7 @@ const mockBackend: Backend = {
   ],
   DownloadSampleBPUModel: async (_board: string, _soc: string): Promise<string> => '/root/models/mobilenetv2_224x224_nv12.bin',
   UploadBPUModel: async (_board: string, filename: string, _data: string): Promise<string> => `/root/models/${filename}`,
+  PrepareLocalPrompt: async (_board: string, prompt: string): Promise<any> => ({prompt, files: []}),
   DeleteBPUModel: async (_board: string, _modelPath: string): Promise<void> => undefined,
 
 
@@ -257,6 +258,7 @@ export const api = {
   listWorkspaceBPUModels: (boardId: string, cwd: string): Promise<string[]> => backend().ListWorkspaceBPUModels(boardId, cwd),
   downloadSampleBPUModel: (boardId: string, soc: string): Promise<string> => backend().DownloadSampleBPUModel(boardId, soc),
   uploadBPUModel: (boardId: string, filename: string, base64Data: string): Promise<string> => backend().UploadBPUModel(boardId, filename, base64Data),
+  prepareLocalPrompt: (boardId: string, prompt: string, accessMode: string): Promise<{prompt: string; files: Array<{localPath: string; boardPath: string; name: string; sizeBytes: number; sha256: string}>}> => backend().PrepareLocalPrompt(boardId, prompt, accessMode),
   deleteBPUModel: (boardId: string, modelPath: string): Promise<void> => backend().DeleteBPUModel(boardId, modelPath),
   disconnectBoard: (id: string) => backend().DisconnectBoard(id),
 

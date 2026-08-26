@@ -11,6 +11,30 @@ export function convertContentBlocks(content) {
   return blocks.length === 1 && blocks[0]?.type === "text" ? blocks[0].text : blocks;
 }
 
+const EPHEMERAL_CACHE_CONTROL = Object.freeze({ type: "ephemeral" });
+
+function withCacheControl(block) {
+  return { ...block, cache_control: EPHEMERAL_CACHE_CONTROL };
+}
+
+function addMessageCacheBreakpoint(messages) {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (typeof message.content === "string") {
+      if (!message.content) continue;
+      message.content = [withCacheControl({ type: "text", text: message.content })];
+      return;
+    }
+    if (!Array.isArray(message.content)) continue;
+    for (let blockIndex = message.content.length - 1; blockIndex >= 0; blockIndex -= 1) {
+      const block = message.content[blockIndex];
+      if (block?.type !== "text" || !block.text) continue;
+      message.content[blockIndex] = withCacheControl(block);
+      return;
+    }
+  }
+}
+
 export function convertMessages(messages, options = {}) {
   const converted = [];
   const allowEmptyThinkingSignature = options.allowEmptyThinkingSignature === true;
@@ -105,14 +129,26 @@ export function convertMessages(messages, options = {}) {
 
   flushInterruptedToolCalls();
 
+  if (options.cacheControl === true) addMessageCacheBreakpoint(converted);
+
   return converted;
 }
 
-export function convertTools(tools) {
+export function convertTools(tools, options = {}) {
   if (!tools?.length) return undefined;
-  return tools.map((tool) => ({
+  const converted = tools.map((tool) => ({
     name: tool.name,
     description: tool.description,
     input_schema: tool.parameters,
   }));
+  if (options.cacheControl === true) {
+    converted[converted.length - 1] = withCacheControl(converted.at(-1));
+  }
+  return converted;
+}
+
+export function convertSystemPrompt(systemPrompt, options = {}) {
+  if (!systemPrompt) return undefined;
+  if (options.cacheControl !== true) return systemPrompt;
+  return [withCacheControl({ type: "text", text: systemPrompt })];
 }
