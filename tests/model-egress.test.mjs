@@ -101,3 +101,36 @@ test("model egress client rejects a public or spoofed socket", async (t) => {
 		/is invalid/,
 	);
 });
+
+test("model egress abort closes a stalled SSE body after response headers", async (t) => {
+	const root = await mkdtemp(join(tmpdir(), "hobot-egress-abort-"));
+	const socket = join(root, "s");
+	let responseClosed = false;
+	const server = createServer((_request, response) => {
+		response.on("close", () => { responseClosed = true; });
+		response.writeHead(200, { "Content-Type": "text/event-stream" });
+		response.write("event: message_start\ndata: {}\n\n");
+	});
+	if (!await listenUnix(server, socket, t)) {
+		await rm(root, { recursive: true, force: true });
+		return;
+	}
+	await chmod(socket, 0o600);
+	t.after(async () => {
+		await closeServer(server);
+		await rm(root, { recursive: true, force: true });
+	});
+
+	const controller = new AbortController();
+	const response = await modelEgressFetch(socket, "drobotics", "https://ignored.invalid", {
+		headers: { Accept: "text/event-stream" },
+		body: JSON.stringify({ model: "kimi-k3", stream: true, messages: [] }),
+		signal: controller.signal,
+	});
+	controller.abort();
+	await assert.rejects(() => response.text(), /abort/i);
+	for (let attempt = 0; attempt < 20 && !responseClosed; attempt += 1) {
+		await new Promise((resolve) => setTimeout(resolve, 10));
+	}
+	assert.equal(responseClosed, true);
+});

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.31.2
+
+- Keep the model-only Unix proxy bound to the request AbortSignal until the SSE response body ends, so Esc can cancel a stalled model turn after response headers have arrived.
+- Add a regression test for aborting a stalled model-only stream and closing both the response body and underlying request.
+
 ## 0.31.1
 
 - Add per-task Mac file access to Studio, defaulting to all locally readable files in read-only mode.

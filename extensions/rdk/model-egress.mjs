@@ -53,7 +53,12 @@ export function modelEgressFetch(socketPath, providerId, _input, init = {}) {
 	return new Promise((resolve, reject) => {
 		let settled = false;
 		let request;
-		const abort = () => request?.destroy(new DOMException("Request was aborted", "AbortError"));
+		let response;
+		const abort = () => {
+			const error = new DOMException("Request was aborted", "AbortError");
+			response?.destroy(error);
+			request?.destroy(error);
+		};
 		const cleanup = () => init.signal?.removeEventListener("abort", abort);
 		const finishReject = (error) => {
 			if (settled) return;
@@ -73,21 +78,24 @@ export function modelEgressFetch(socketPath, providerId, _input, init = {}) {
 					? {"Anthropic-Beta": anthropicBeta}
 					: {}),
 			},
-		}, (response) => {
+		}, (incoming) => {
 			if (settled) {
-				response.destroy();
+				incoming.destroy();
 				return;
 			}
 			settled = true;
-			cleanup();
+			response = incoming;
+			incoming.once("end", cleanup);
+			incoming.once("close", cleanup);
+			incoming.once("error", cleanup);
 			const responseHeaders = new Headers();
 			for (const name of ["content-type", "request-id", "cache-control"]) {
-				const value = response.headers[name];
+				const value = incoming.headers[name];
 				if (typeof value === "string") responseHeaders.set(name, value);
 			}
-			resolve(new Response(Readable.toWeb(response), {
-				status: response.statusCode ?? 502,
-				statusText: response.statusMessage,
+			resolve(new Response(Readable.toWeb(incoming), {
+				status: incoming.statusCode ?? 502,
+				statusText: incoming.statusMessage,
 				headers: responseHeaders,
 			}));
 		});
