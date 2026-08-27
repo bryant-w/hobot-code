@@ -110,7 +110,7 @@ Studio 添加板卡时会先验证 SSH、协议、能力与实际板型，成功
 
 桌面端在当前模型明确声明支持图像输入时，允许在新任务和后续消息中附加 JPEG、PNG、WebP 或 GIF 图片；模型能力未知时按纯文本处理。大图会在 Mac 本地缩放压缩，每条消息最多 4 张、编码前合计不超过 1 MiB；图片通过既有 SSH/RPC 通道直接写入板端会话，不创建公开上传地址，事件日志只保留文件名和 MIME 摘要。Studio 和 agentd 会分别校验同一套[模型能力契约](docs/model-capabilities.md)，客户端不能绕过。PDF、Word 等文档附件尚未开放，也不会被静默当作纯文本发送。
 
-新任务页提供板卡诊断、模型部署、Camera pipeline、TROS 和 BPU 性能验证入口。板卡诊断等通用入口只会预填一条可编辑的专业任务。0.23.0 及之后的板端上，**Deploy model** 会打开部署向导：它在当前项目内有界扫描模型候选，结合实机板型标注转换需求或疑似不匹配，用户选择产物和目标后才创建持久任务。任务仍走板端审批；0.23.1 要求 schema-v2 报告包含量化前后数值精度、模型与端到端延迟分布、资源采样和温度/内存限制，只有这些证据、板型、产物路径和 SHA-256 均经守护进程复核后，Studio 才显示为 Verified deployment。RDK X5 的 RegNet-X-400MF 目标闭环与固定验收命令见[部署说明](docs/regnet-x5-deployment.md)；[RT-IGEV 说明](docs/rt-igev-x5-deployment.md)保留了复杂立体模型未达到实时阈值时的方案筛选边界。
+新任务页提供板卡诊断、模型部署、Camera pipeline、TROS 和 BPU 性能验证入口。板卡诊断等通用入口只会预填一条可编辑的专业任务。0.23.0 及之后的板端上，**Deploy model** 会打开部署向导：它在当前项目内有界扫描模型候选，结合实机板型标注转换需求或疑似不匹配，用户选择产物和目标后才创建持久任务。任务仍走板端审批；0.23.1 要求 schema-v2 报告包含量化前后数值精度、模型与端到端延迟分布、资源采样和温度/内存限制，只有这些证据、板型、产物路径和 SHA-256 均经守护进程复核后，Studio 才显示为 Verified deployment。模型量化 Agent 的 Prompt、三工具协议、知识和模板由[共享 Bundle](docs/rdk-quantization-agent-bundle.md)统一提供给 Hobot Code 与训练 Harness。RDK X5 的 RegNet-X-400MF 目标闭环与固定验收命令见[部署说明](docs/regnet-x5-deployment.md)；[RT-IGEV 说明](docs/rt-igev-x5-deployment.md)保留了复杂立体模型未达到实时阈值时的方案筛选边界。
 
 终端使用同一套板端部署协议：
 

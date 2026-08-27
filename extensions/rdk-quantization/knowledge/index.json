@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "id": "hobot-rdk-quantization-knowledge-v1",
+  "routes": {
+    "workflow": "bundle://knowledge/workflow.md",
+    "model-contract": "bundle://knowledge/model-contract.md",
+    "calibration": "bundle://knowledge/calibration.md",
+    "report": "bundle://knowledge/report-schema.json",
+    "x5-template": "bundle://templates/x5-onnx.yaml",
+    "s100-template": "bundle://templates/s100-onnx.yaml",
+    "s600-template": "bundle://templates/s600-onnx.yaml",
+    "official-sources": "bundle://official-sources/index.json"
+  },
+  "rules": [
+    "Read at most two routed resources per stage.",
+    "Use native versions and errors as live evidence.",
+    "Keep generated output under relative quantization paths.",
+    "Ask the user only for unresolved blocking semantics."
+  ]
+}

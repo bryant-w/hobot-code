@@ -1,0 +1,54 @@
+{
+  "schema": 1,
+  "id": "rdk-embedded-agent-tools-v1",
+  "rules": {
+    "resourceAuthority": "SSH destinations and user resource paths come only from user messages.",
+    "execution": "Commands invoke native interfaces in endpoint-specific private task workspaces.",
+    "sourceDiscovery": "Bundle resources are immutable; official retrieval is anonymous, read-only, allowlisted, size-bounded, and digest-recorded.",
+    "completion": "The Agent writes quantization/report.json and returns user-facing artifact paths."
+  },
+  "tools": [
+    {
+      "name": "remote_shell",
+      "description": "Run one synchronous Bash command on an exact user-declared x86 or RDK SSH destination. Each destination uses a private task workspace for relative paths; user-declared absolute input paths remain readable according to endpoint permissions. Bash starts with set -e -o pipefail; use set +e only around an optional probe whose nonzero status you will inspect. Commands and descendants are terminated at timeoutSeconds. Use 30-60 seconds for probes and explicit longer limits only for foreground conversion, evaluation, or performance. Keep scripts and generated files in separate calls and each command comfortably below the 16384-character schema limit. Never retry a hanging command unchanged. The result contains auditId, exitCode, bounded stdout/stderr, and truncation flags.",
+      "input": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "target": {"type": "string", "minLength": 1, "maxLength": 256, "pattern": "^[A-Za-z0-9._-]+(?:@[A-Za-z0-9._-]+)?$"},
+          "command": {"type": "string", "minLength": 1, "maxLength": 16384},
+          "timeoutSeconds": {"type": "integer", "minimum": 1, "maximum": 3600}
+        },
+        "required": ["target", "command"]
+      }
+    },
+    {
+      "name": "source_fetch",
+      "description": "Read one immutable bundle:// resource or one anonymous official HTTPS source document. Bundle resources contain the shared Hobot Code quantization prompt, knowledge, templates, helper contracts, and source registry. Official retrieval is GET-only, allowlisted, size-bounded, and digest-recorded. This tool returns evidence and never decides model semantics.",
+      "input": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "url": {"type": "string", "minLength": 12, "maxLength": 2048, "pattern": "^(?:https://|bundle://)[^\\s]+$"}
+        },
+        "required": ["url"]
+      }
+    },
+    {
+      "name": "file_copy",
+      "description": "Copy one regular file between two different user-declared SSH endpoints. Paths are relative to each endpoint's private task workspace; absolute paths, traversal, directories, and globs are rejected. expectedSha256 is checked at source and destination. Create one archive with remote_shell before transferring a directory or file set.",
+      "input": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sourceTarget": {"type": "string", "minLength": 1, "maxLength": 256, "pattern": "^[A-Za-z0-9._-]+(?:@[A-Za-z0-9._-]+)?$"},
+          "destinationTarget": {"type": "string", "minLength": 1, "maxLength": 256, "pattern": "^[A-Za-z0-9._-]+(?:@[A-Za-z0-9._-]+)?$"},
+          "sourcePath": {"type": "string", "minLength": 1, "maxLength": 1024},
+          "destinationPath": {"type": "string", "minLength": 1, "maxLength": 1024},
+          "expectedSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        },
+        "required": ["sourceTarget", "destinationTarget", "sourcePath", "destinationPath", "expectedSha256"]
+      }
+    }
+  ]
+}

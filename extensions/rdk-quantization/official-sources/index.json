@@ -1,0 +1,47 @@
+{
+  "schema": 1,
+  "id": "hobot-rdk-official-source-registry-v1",
+  "matchLevels": {
+    "exact": "Identity/version, task, tensors, and preprocessing agree.",
+    "variant": "Same family with a different size, version, or head; verify each semantic field.",
+    "family": "Architecture or task mechanics only; never copy model-specific semantics as facts.",
+    "none": "No trusted match; request user source or inference code only for blocking unknowns."
+  },
+  "sources": [
+    {
+      "id": "drobotics-rdk-model-zoo",
+      "trust": "vendor-official",
+      "repository": "https://github.com/D-Robotics/rdk_model_zoo",
+      "branches": {"x5": "rdk_x5", "s-series": "rdk_s", "x3": "rdk_x3"},
+      "contentsApiTemplate": "https://api.github.com/repos/D-Robotics/rdk_model_zoo/contents/PATH?ref=COMMIT",
+      "rawTemplate": "https://raw.githubusercontent.com/D-Robotics/rdk_model_zoo/COMMIT/PATH",
+      "commonArtifactNames": ["README.md", "*_config.yaml", "get_calibration_data.py", "preprocess.py", "main.py"],
+      "commonModelRoots": [
+        {"family": "efficientnet", "path": "samples/vision/efficientnet"},
+        {"family": "mobilenet", "path": "samples/vision/mobilenetv2"},
+        {"family": "resnet", "path": "samples/vision/resnet18"},
+        {"family": "ultralytics-yolo", "path": "samples/vision/ultralytics_yolo"},
+        {"family": "yolov5", "path": "samples/vision/yolov5"}
+      ]
+    },
+    {
+      "id": "timm",
+      "trust": "upstream-official",
+      "repository": "https://github.com/huggingface/pytorch-image-models",
+      "rawTemplate": "https://raw.githubusercontent.com/huggingface/pytorch-image-models/COMMIT/PATH",
+      "modelHubTemplate": "https://huggingface.co/timm/MODEL/raw/main/config.json"
+    },
+    {"id": "ultralytics", "trust": "upstream-official", "repository": "https://github.com/ultralytics/ultralytics"},
+    {"id": "torchvision", "trust": "upstream-official", "repository": "https://github.com/pytorch/vision"},
+    {"id": "transformers", "trust": "upstream-official", "repository": "https://github.com/huggingface/transformers"},
+    {"id": "onnx-model-zoo", "trust": "upstream-official", "repository": "https://github.com/onnx/models"},
+    {"id": "mmdetection", "trust": "upstream-official", "repository": "https://github.com/open-mmlab/mmdetection"}
+  ],
+  "rules": [
+    "Inspect local model and data before retrieval.",
+    "Use exact D-Robotics deployment evidence, then exact upstream identity, then family guidance.",
+    "For an exact sample inspect config, calibration generator, runtime preprocessing, and model card together.",
+    "Prefer the GitHub contents API for small source files; retry one failed URL at most once, then use another official interface.",
+    "Do not execute downloaded source directly."
+  ]
+}

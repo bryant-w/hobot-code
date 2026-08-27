@@ -1,0 +1,94 @@
+{
+  "schema": 1,
+  "id": "hobot.rdk-quantization-agent",
+  "version": "1.0.0",
+  "toolSchemaId": "rdk-embedded-agent-tools-v1",
+  "entrypoints": {
+    "product": "index.ts",
+    "harness": "harness-entry.ts"
+  },
+  "resourceScheme": "bundle",
+  "files": [
+    {
+      "path": "bundle-source.ts",
+      "bytes": 1776,
+      "sha256": "3cff3e9fa84b76cbcf1d5fdba6fb9d4def4ad5d0ca2a17eed2326f21c18bbd53"
+    },
+    {
+      "path": "core.ts",
+      "bytes": 4729,
+      "sha256": "a59f3079908f037eeaa29bc799657ac3567405628bf118744b4602cc7c4251f8"
+    },
+    {
+      "path": "harness-entry.ts",
+      "bytes": 1839,
+      "sha256": "172d0e1ed344da92667c39d8f39b39f2c62e4078e58b61771d9a56d2fed1bab4"
+    },
+    {
+      "path": "index.ts",
+      "bytes": 492,
+      "sha256": "ff30abe1975dcd38c85fef1e8df5b0ab35081f7ad923ade2f785e8f87a9bf603"
+    },
+    {
+      "path": "product-transport.ts",
+      "bytes": 8913,
+      "sha256": "d305ffca497954786178e1340e8b2f34eef35a9ffbcddc600430d98eda640b31"
+    },
+    {
+      "path": "tool-schema.json",
+      "bytes": 3675,
+      "sha256": "73a4818b321716c3619767768b2356a4db27dc23dfea9b76bfaf5db36429bfd1"
+    },
+    {
+      "path": "prompt/system.md",
+      "bytes": 3955,
+      "sha256": "5c65e2c272c27f017cb573de8e12c4722c028a04e5d28da306eb61ccf4582fe0"
+    },
+    {
+      "path": "knowledge/index.json",
+      "bytes": 789,
+      "sha256": "2f9a53aadbb434fa8b687140feb5bfd99461e04e5e25f6c6132b4773d1e4b214"
+    },
+    {
+      "path": "knowledge/workflow.md",
+      "bytes": 1984,
+      "sha256": "7bfb17090f91d1e507b6d4c8674fd857c7d6a1d65bcc1cdf4d3db966a0ceb160"
+    },
+    {
+      "path": "knowledge/model-contract.md",
+      "bytes": 663,
+      "sha256": "6455e7f82a15097df6051baa8bb151aaa615cd42d6d3fd3ca0bb68bb9ea50315"
+    },
+    {
+      "path": "knowledge/calibration.md",
+      "bytes": 720,
+      "sha256": "275c1c225ba9cca6d408127f0f600cd351c2173474da33a6e96d427f8efd8f47"
+    },
+    {
+      "path": "knowledge/report-schema.json",
+      "bytes": 1900,
+      "sha256": "7a4c3ceee73314402858bfb4cc618b08525038e3e4b2f49049c5b5133152afe0"
+    },
+    {
+      "path": "templates/x5-onnx.yaml",
+      "bytes": 896,
+      "sha256": "c906a483f65aa64ebda26e43208787b6fdd548aaf0750ba2ef12318ed80f5516"
+    },
+    {
+      "path": "templates/s100-onnx.yaml",
+      "bytes": 1366,
+      "sha256": "c42a8b70bf7c1df81a30cc2207d18fca415b8ee2ec10e956b967e501d6c4a7a8"
+    },
+    {
+      "path": "templates/s600-onnx.yaml",
+      "bytes": 1176,
+      "sha256": "5521b3fc719f560e532fb596856cd23b0496c23c45bb00475a4c2c51610c1b67"
+    },
+    {
+      "path": "official-sources/index.json",
+      "bytes": 2789,
+      "sha256": "10805b38692d6e1a3143d9bf55f72e8f130bcb209f9e981f2dd98a8822a982f1"
+    }
+  ],
+  "fileSetSha256": "f0a1103089708b81037fff25bd3f0e24a5a1f81e708eacd02764348853a68315"
+}

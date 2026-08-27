@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Hobot Code RDK quantization report v1",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": 1},
+    "outcome": {"enum": ["success", "partial", "failed"]},
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "taskQuality": {"type": "object"},
+        "fidelity": {"type": "object"},
+        "latency": {"type": "object"},
+        "thermal": {"type": "object"},
+        "resources": {"type": "object"},
+        "limitations": {"type": "array", "items": {"type": "string"}}
+      },
+      "required": ["taskQuality", "fidelity", "latency", "thermal", "resources", "limitations"]
+    },
+    "artifact": {
+      "description": "Final deployed model path relative to the RDK board task workspace.",
+      "$ref": "#/$defs/file"
+    },
+    "provenance": {
+      "description": "Provenance document path relative to the x86 task workspace.",
+      "$ref": "#/$defs/file"
+    }
+  },
+  "required": ["schema", "outcome", "summary", "artifact", "provenance"],
+  "$defs": {
+    "file": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      },
+      "required": ["path", "sha256"]
+    }
+  },
+  "x-provenanceDelivery": {
+    "required": ["convertedSource", "conversionConfig", "conversionLog", "graphChanged", "weightsChanged", "retrained"],
+    "fileFields": ["convertedSource", "conversionConfig", "conversionLog"],
+    "booleanFields": ["graphChanged", "weightsChanged", "retrained"],
+    "booleanMeaning": "Agent edits to the source graph, source weights, or training; pure PTQ and compiler-generated representations leave all three false.",
+    "additionalProperties": false
+  }
+}

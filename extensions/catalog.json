@@ -46,6 +46,39 @@
       ]
     },
     {
+      "id": "hobot.rdk-quantization-agent",
+      "name": "RDK model quantization agent",
+      "version": "1.0.0",
+      "kind": "extension",
+      "description": "Shared Hobot Code and training-Harness model quantization, conversion, physical deployment, and validation interface.",
+      "origin": "built-in",
+      "scope": "system",
+      "runtime": "pi-extension",
+      "entrypoint": "rdk-quantization/index.ts",
+      "trust": "product",
+      "defaultEnabled": true,
+      "required": false,
+      "provides": [
+        "tool.remote-shell",
+        "tool.source-fetch",
+        "tool.file-copy",
+        "agent.rdk-quantization"
+      ],
+      "requires": [
+        "pi.extension-api"
+      ],
+      "permissions": [
+        "model-network",
+        "workspace",
+        "subprocess"
+      ],
+      "targets": [
+        "x5",
+        "s100",
+        "s600"
+      ]
+    },
+    {
       "id": "hobot.skill.rdk-board",
       "name": "RDK board development",
       "version": "1",
