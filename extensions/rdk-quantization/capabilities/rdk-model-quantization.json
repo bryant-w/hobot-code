@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "id": "rdk-model-quantization",
+  "requiredUserResources": [
+    {"name": "modelPath", "description": "Absolute model path on the user-provided conversion endpoint."},
+    {"name": "calibrationPath", "description": "Absolute calibration data path on the conversion endpoint."},
+    {"name": "x86Ssh", "description": "User-provided SSH destination for the conversion endpoint."},
+    {"name": "boardSsh", "description": "User-provided SSH destination for the target RDK board."}
+  ],
+  "optionalUserResources": [
+    {"name": "validationPath", "description": "Labeled or semantic validation data when available."},
+    {"name": "sourceRepository", "description": "User source or export implementation when official discovery cannot resolve blocking semantics."},
+    {"name": "acceptanceRequirements", "description": "User quality, latency, throughput, temperature, or resource requirements."}
+  ],
+  "tools": ["remote_shell", "source_fetch", "file_copy"],
+  "domain": "bundle://knowledge/index.json",
+  "skills": "bundle://skills/index.json",
+  "completion": {
+    "report": "quantization/report.json",
+    "provenance": "quantization/provenance.json"
+  }
+}

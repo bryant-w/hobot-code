@@ -1,16 +1,16 @@
 {
   "schema": 1,
-  "id": "rdk-embedded-agent-tools-v1",
+  "id": "rdk-embedded-agent-tools-v2",
   "rules": {
     "resourceAuthority": "SSH destinations and user resource paths come only from user messages.",
     "execution": "Commands invoke native interfaces in endpoint-specific private task workspaces.",
     "sourceDiscovery": "Bundle resources are immutable; official retrieval is anonymous, read-only, allowlisted, size-bounded, and digest-recorded.",
-    "completion": "The Agent writes quantization/report.json and returns user-facing artifact paths."
+    "completion": "The Agent follows the selected capability's completion contract and returns user-facing result and artifact locations."
   },
   "tools": [
     {
       "name": "remote_shell",
-      "description": "Run one synchronous Bash command on an exact user-declared x86 or RDK SSH destination. Each destination uses a private task workspace for relative paths; user-declared absolute input paths remain readable according to endpoint permissions. Bash starts with set -e -o pipefail; use set +e only around an optional probe whose nonzero status you will inspect. Commands and descendants are terminated at timeoutSeconds. Use 30-60 seconds for probes and explicit longer limits only for foreground conversion, evaluation, or performance. Keep scripts and generated files in separate calls and each command comfortably below the 16384-character schema limit. Never retry a hanging command unchanged. The result contains auditId, exitCode, bounded stdout/stderr, and truncation flags.",
+      "description": "Run one synchronous Bash command on an exact user-declared SSH destination. Each destination uses a private task workspace for relative paths; user-declared absolute input paths remain readable according to endpoint permissions. Bash starts with set -e -o pipefail; use set +e only around an optional probe whose nonzero status you will inspect. Commands and descendants are terminated at timeoutSeconds. Use short limits for probes and explicit longer limits only for foreground work. Keep scripts and generated files in separate calls and each command comfortably below the 16384-character schema limit. Never retry a hanging command unchanged. The result contains auditId, exitCode, bounded stdout/stderr, and truncation flags.",
       "input": {
         "type": "object",
         "additionalProperties": false,
@@ -24,7 +24,7 @@
     },
     {
       "name": "source_fetch",
-      "description": "Read one immutable bundle:// resource or one anonymous official HTTPS source document. Bundle resources contain the shared Hobot Code quantization prompt, knowledge, templates, helper contracts, and source registry. Official retrieval is GET-only, allowlisted, size-bounded, and digest-recorded. This tool returns evidence and never decides model semantics.",
+      "description": "Read one immutable bundle:// capability resource or one anonymous official HTTPS source document. Capability resources contain catalogs, domain knowledge, templates, contracts, and source registries. Official retrieval is GET-only, allowlisted, size-bounded, and digest-recorded. This tool returns evidence and never decides task-specific semantics.",
       "input": {
         "type": "object",
         "additionalProperties": false,

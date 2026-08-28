@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "id": "hobot-capability-catalog-v1",
+  "capabilities": [
+    {
+      "id": "rdk-model-quantization",
+      "intents": [
+        "convert or quantize a model for an RDK target",
+        "deploy and validate an embedded model on RDK hardware"
+      ],
+      "entry": "bundle://capabilities/rdk-model-quantization.json"
+    }
+  ],
+  "rules": [
+    "Select one capability before reading domain knowledge.",
+    "If no capability matches, do not reuse an unrelated domain bundle.",
+    "Ask the user to clarify an ambiguous task instead of guessing."
+  ]
+}

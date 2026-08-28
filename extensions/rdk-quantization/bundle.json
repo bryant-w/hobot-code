@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "id": "hobot.rdk-quantization-agent",
-  "version": "1.0.0",
-  "toolSchemaId": "rdk-embedded-agent-tools-v1",
+  "version": "2.0.0",
+  "toolSchemaId": "rdk-embedded-agent-tools-v2",
   "entrypoints": {
     "product": "index.ts",
     "harness": "harness-entry.ts"
@@ -16,8 +16,8 @@
     },
     {
       "path": "core.ts",
-      "bytes": 4729,
-      "sha256": "a59f3079908f037eeaa29bc799657ac3567405628bf118744b4602cc7c4251f8"
+      "bytes": 4593,
+      "sha256": "a7ddd09b6ad0771f0dba1a61140b536275acc4c955f761b1aa0c466743b68ac5"
     },
     {
       "path": "harness-entry.ts",
@@ -36,23 +36,33 @@
     },
     {
       "path": "tool-schema.json",
-      "bytes": 3675,
-      "sha256": "73a4818b321716c3619767768b2356a4db27dc23dfea9b76bfaf5db36429bfd1"
+      "bytes": 3658,
+      "sha256": "005e9a27d75b2e2b6dca15d867b0cc1a1c0a076b98fed60ecfbccdff82bab2d1"
     },
     {
       "path": "prompt/system.md",
-      "bytes": 3955,
-      "sha256": "5c65e2c272c27f017cb573de8e12c4722c028a04e5d28da306eb61ccf4582fe0"
+      "bytes": 1439,
+      "sha256": "2b22fe8ba3259c10818e7ddf3f6304e04bfbbd53fe555494908219c32f9f4323"
+    },
+    {
+      "path": "capabilities/index.json",
+      "bytes": 571,
+      "sha256": "9c6d09f6614f479910971c230ba9d4d074c953b9480c74d4e2e24e67b0a3b2da"
+    },
+    {
+      "path": "capabilities/rdk-model-quantization.json",
+      "bytes": 1177,
+      "sha256": "620d1d125b7408b1c7c78b09f1c1bccc21572d9cb31672a5c45af0ffa2cfb934"
     },
     {
       "path": "knowledge/index.json",
-      "bytes": 789,
-      "sha256": "2f9a53aadbb434fa8b687140feb5bfd99461e04e5e25f6c6132b4773d1e4b214"
+      "bytes": 1001,
+      "sha256": "a19d305f069762b88de209d3d483216cec525b77294698f3f5363351d8011b6b"
     },
     {
       "path": "knowledge/workflow.md",
-      "bytes": 1984,
-      "sha256": "7bfb17090f91d1e507b6d4c8674fd857c7d6a1d65bcc1cdf4d3db966a0ceb160"
+      "bytes": 5330,
+      "sha256": "0e48c005530c802b44df0acc50041be8185583b06d09f193624278856e8e4e9f"
     },
     {
       "path": "knowledge/model-contract.md",
@@ -66,23 +76,33 @@
     },
     {
       "path": "knowledge/report-schema.json",
-      "bytes": 1900,
-      "sha256": "7a4c3ceee73314402858bfb4cc618b08525038e3e4b2f49049c5b5133152afe0"
+      "bytes": 2619,
+      "sha256": "76c90b07bae77d4b45c2ab2b6dad066228613df00fc7389238b0ea673e28e253"
+    },
+    {
+      "path": "skills/index.json",
+      "bytes": 2663,
+      "sha256": "d8e9bf64e02d52acd36b1ee3017ef7c11036b7172c78cd3a97a628ed89afa922"
+    },
+    {
+      "path": "skills/rdk-classification-ptq.md",
+      "bytes": 5234,
+      "sha256": "1bf626562a064a642afb3395c2fab3284e08c919aab8865640b54d30afc4969d"
     },
     {
       "path": "templates/x5-onnx.yaml",
-      "bytes": 896,
-      "sha256": "c906a483f65aa64ebda26e43208787b6fdd548aaf0750ba2ef12318ed80f5516"
+      "bytes": 1024,
+      "sha256": "1aefe240bf9df2e5beda46ae00a30431ab77fc6dde1ff7631e7125df5ec59d62"
     },
     {
       "path": "templates/s100-onnx.yaml",
-      "bytes": 1366,
-      "sha256": "c42a8b70bf7c1df81a30cc2207d18fca415b8ee2ec10e956b967e501d6c4a7a8"
+      "bytes": 1481,
+      "sha256": "7e3b7086d072e60d54b02d76510c246645ac87aacfb93d840c6d6409bb0a19a8"
     },
     {
       "path": "templates/s600-onnx.yaml",
-      "bytes": 1176,
-      "sha256": "5521b3fc719f560e532fb596856cd23b0496c23c45bb00475a4c2c51610c1b67"
+      "bytes": 1291,
+      "sha256": "6beb91eb755c9e88a7447e1f58d6c44e46d7d191ce37ef94e3c348e91e228748"
     },
     {
       "path": "official-sources/index.json",
@@ -90,5 +110,5 @@
       "sha256": "10805b38692d6e1a3143d9bf55f72e8f130bcb209f9e981f2dd98a8822a982f1"
     }
   ],
-  "fileSetSha256": "f0a1103089708b81037fff25bd3f0e24a5a1f81e708eacd02764348853a68315"
+  "fileSetSha256": "edf90f9ec95bcc88c6271bced2913e56d22b00d3b9d585332f4658034cf31ec2"
 }

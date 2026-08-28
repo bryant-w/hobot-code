@@ -40,11 +40,24 @@
       "required": ["path", "sha256"]
     }
   },
-  "x-provenanceDelivery": {
-    "required": ["convertedSource", "conversionConfig", "conversionLog", "graphChanged", "weightsChanged", "retrained"],
-    "fileFields": ["convertedSource", "conversionConfig", "conversionLog"],
-    "booleanFields": ["graphChanged", "weightsChanged", "retrained"],
-    "booleanMeaning": "Agent edits to the source graph, source weights, or training; pure PTQ and compiler-generated representations leave all three false.",
-    "additionalProperties": false
+  "x-provenanceDocument": {
+    "reportPointer": "report.json.provenance contains exactly path and sha256",
+    "requiredTopLevelSection": "delivery",
+    "delivery": {
+      "required": ["convertedSource", "conversionConfig", "conversionLog", "graphChanged", "weightsChanged", "retrained"],
+      "fileFields": ["convertedSource", "conversionConfig", "conversionLog"],
+      "booleanFields": ["graphChanged", "weightsChanged", "retrained"],
+      "booleanMeaning": "Agent edits to the source graph, source weights, or training; pure PTQ and compiler-generated representations leave all three false.",
+      "additionalProperties": false
+    }
+  },
+  "x-finalizationOrder": {
+    "steps": [
+      "Copy and digest the final model, source model, conversion YAML, and conversion log at four distinct board-relative paths.",
+      "Write provenance.json with those three provenance paths and compute its digest after the final write.",
+      "Write report.json last with the board artifact and x86 provenance pointer.",
+      "After any rewrite, recompute every affected digest before completion."
+    ],
+    "distinctPaths": ["artifact", "provenance", "convertedSource", "conversionConfig", "conversionLog"]
   }
 }

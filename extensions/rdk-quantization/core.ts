@@ -2,8 +2,8 @@ import { Type } from "@earendil-works/pi-ai";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 export const QUANTIZATION_BUNDLE_ID = "hobot.rdk-quantization-agent";
-export const QUANTIZATION_BUNDLE_VERSION = "1.0.0";
-export const QUANTIZATION_TOOL_SCHEMA_ID = "rdk-embedded-agent-tools-v1";
+export const QUANTIZATION_BUNDLE_VERSION = "2.0.0";
+export const QUANTIZATION_TOOL_SCHEMA_ID = "rdk-embedded-agent-tools-v2";
 
 export type JsonRecord = Record<string, unknown>;
 
@@ -57,8 +57,8 @@ export function registerQuantizationAgent(
   pi.registerTool({
     name: "remote_shell",
     label: "Run endpoint shell",
-    description: "Run one synchronous Bash command on an exact user-declared x86 or RDK SSH destination. Each destination uses a private task workspace for relative paths; user-declared absolute input paths remain readable according to endpoint permissions. Bash starts with set -e -o pipefail; use set +e only around an optional probe whose nonzero status you will inspect. Commands and descendants are terminated at timeoutSeconds. Use 30-60 seconds for probes and explicit longer limits only for foreground conversion, evaluation, or performance. Keep scripts and generated files in separate calls and each command comfortably below the 16384-character schema limit. Never retry a hanging command unchanged. The result contains auditId, exitCode, bounded stdout/stderr, and truncation flags.",
-    promptSnippet: "Run bounded native commands on the user-declared x86 toolchain host or RDK board",
+    description: "Run one synchronous Bash command on an exact user-declared SSH destination. Each destination uses a private task workspace for relative paths; user-declared absolute input paths remain readable according to endpoint permissions. Bash starts with set -e -o pipefail; use set +e only around an optional probe whose nonzero status you will inspect. Commands and descendants are terminated at timeoutSeconds. Use short limits for probes and explicit longer limits only for foreground work. Keep scripts and generated files in separate calls and each command comfortably below the 16384-character schema limit. Never retry a hanging command unchanged. The result contains auditId, exitCode, bounded stdout/stderr, and truncation flags.",
+    promptSnippet: "Run bounded native commands on a user-declared SSH endpoint",
     parameters: remoteShellSchema,
     async execute(_id, args) {
       return toolResult(await transport.call("remote_shell", args));
@@ -67,9 +67,9 @@ export function registerQuantizationAgent(
 
   pi.registerTool({
     name: "source_fetch",
-    label: "Read quantization source",
-    description: "Read one immutable bundle resource through bundle:// or one anonymous official HTTPS source document. Bundle resources contain the shared Hobot Code quantization prompt, knowledge, templates, helper contracts, and source registry. Official network retrieval is GET-only, allowlisted, size-bounded, and digest-recorded. This tool returns evidence; it never decides model identity or preprocessing semantics.",
-    promptSnippet: "Read the shared quantization bundle or targeted official model sources",
+    label: "Read capability source",
+    description: "Read one immutable capability resource through bundle:// or one anonymous official HTTPS source document. Capability resources contain catalogs, domain knowledge, templates, contracts, and source registries. Official network retrieval is GET-only, allowlisted, size-bounded, and digest-recorded. This tool returns evidence and never decides task-specific semantics.",
+    promptSnippet: "Read a capability resource or targeted official source",
     parameters: sourceFetchSchema,
     async execute(_id, args) {
       return toolResult(await transport.call("source_fetch", args));
@@ -80,7 +80,7 @@ export function registerQuantizationAgent(
     name: "file_copy",
     label: "Copy verified endpoint file",
     description: "Copy one regular file between two different user-declared SSH endpoints. Paths are relative to each endpoint's private task workspace; absolute paths, traversal, directories, and globs are rejected. expectedSha256 is checked at source and destination. Create one archive with remote_shell before transferring a directory or file set.",
-    promptSnippet: "Transfer one digest-verified model or evidence archive between x86 and RDK workspaces",
+    promptSnippet: "Transfer one digest-verified file between user-declared endpoint workspaces",
     parameters: fileCopySchema,
     async execute(_id, args) {
       return toolResult(await transport.call("file_copy", args));

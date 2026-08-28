@@ -48,7 +48,7 @@
     {
       "id": "hobot.rdk-quantization-agent",
       "name": "RDK model quantization agent",
-      "version": "1.0.0",
+      "version": "2.0.0",
       "kind": "extension",
       "description": "Shared Hobot Code and training-Harness model quantization, conversion, physical deployment, and validation interface.",
       "origin": "built-in",

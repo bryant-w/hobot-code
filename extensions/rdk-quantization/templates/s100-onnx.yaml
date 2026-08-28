@@ -14,10 +14,11 @@ model_parameters:
 input_parameters:
   input_name: ''
   input_shape: ''
-  input_type_rt: 'featuremap'
-  input_type_train: 'featuremap'
-  input_layout_train: 'NCHW'
-  norm_type: 'no_preprocess'
+  # Replace every CONTRACT_REQUIRED value from exact model/export/runtime evidence.
+  input_type_rt: 'CONTRACT_REQUIRED'
+  input_type_train: 'CONTRACT_REQUIRED'
+  input_layout_train: 'CONTRACT_REQUIRED'
+  norm_type: 'CONTRACT_REQUIRED'
   # input_layout_rt: 'NCHW'
   # mean_value: ''
   # scale_value: ''

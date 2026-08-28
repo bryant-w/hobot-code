@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "id": "hobot-rdk-runtime-skills-v1",
+  "capability": "rdk-model-quantization",
+  "policy": {
+    "decisionOwner": "agent",
+    "implementationOwner": "hobot-code-executor",
+    "fallback": "native remote_shell commands",
+    "rule": "A Skill performs declared mechanics only. It never selects model identity, preprocessing, YAML values, retry strategy, acceptance thresholds or final outcome."
+  },
+  "skills": [
+    {
+      "id": "rdk-classification-ptq-v1",
+      "guide": "bundle://skills/rdk-classification-ptq.md",
+      "bootstrap": "First x86 probe: python3 $HOBOT_SKILLS_ROOT/config_audit.py inspect --model MODEL --dataset DATASET --output quantization/inspect.json. Its output includes a compact manifest summary; do not inspect helper --help, cat the full manifest, or recreate this inventory with inline code.",
+      "boardBatchContract": "After one verified archive transfer, run delivery/board_validate.py directly. It verifies the first physical output, executes the labeled batch, runs native performance measurement, samples temperature, and writes delivery/metrics.json. Do not run separate hrt_model_exec help/infer, manual output parsing, or background thermal loops unless its returned diagnostic reports a missing boundary.",
+      "finalDecisionContract": "decision.json has exactly outcome, modificationTier, retrained, limitations. outcome is success, partial, or failed; modificationTier is A, B, or C; retrained is boolean; limitations is a string array.",
+      "preconditions": [
+        "ONNX model with one static image input",
+        "classification validation manifest with id, rgb and label fields",
+        "NV12 is the Agent-selected deployed runtime contract"
+      ],
+      "runtimeRoot": "$HOBOT_SKILLS_ROOT",
+      "implementations": [
+        {"path": "config_audit.py", "sha256": "7e04017b67f17f8f6d2047b6ea7e93d28e817cce9bc3da0893ebb1ab5f83ee84"},
+        {"path": "calibration_prepare.py", "sha256": "e896cc49e8042140f4fb5c67aeff0fb888aa4ddcdbe39578b03d6ed3e61119ad"},
+        {"path": "classification_reference.py", "sha256": "2d9dee9415522b7457773b269bf5f7376a6335c72d016cef54782b4ec0fcb1c9"},
+        {"path": "runtime_validation.py", "sha256": "77a564282ce6e820d9aba976aec1d8a68700a4bd92395c2a88058d3b08516755"},
+        {"path": "classification_contracts.py", "sha256": "93888f8aaf596e3e201c106d242194f5e9aed66426a908c15f89061f1c43d7c6"},
+        {"path": "board_validate.py", "sha256": "740136c50c5ecb27aea434cc9f6f91e5fff267909c093c9e7da2d3b33c38aa3f"},
+        {"path": "report_finalize.py", "sha256": "91b4687bf237864d8ac36da4b86988fc67d75ed66bcb3155f6b1bb51904e103b"}
+      ]
+    }
+  ]
+}
